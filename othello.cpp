@@ -343,13 +343,16 @@ int menu_tick(){
 			break;
 	}
 }
+enum matrixstates {
+int ledMatrix_SM{
+    for(int i = 0; i < ROWS; ++i){
+        for(int j = 0; j < COLUMNS; ++j){
+
+}
 
 #define MODERES if(mode == 0){\
                     p_state = init;\
                 }
-int ledMatrix_SM{
-	
-}
 int play_SM(){
     static play2_states p_state;
     static unsigned char max_cnt = 0;
