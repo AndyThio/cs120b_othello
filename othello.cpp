@@ -19,7 +19,7 @@ unsigned char difficulty = 0;
 unsigned char mode = 0;
 unsigned char lcdtext[32];
 
-unsigned char* board[ROWS][COLUMNS];
+unsigned char currboard[ROWS][COLUMNS];
 
 enum menu_SM {title, play2, play2Go, play1, play1Go, diffInc, diffDec, res, res_comfirm, reseted };
 enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory};
@@ -27,17 +27,17 @@ enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, chec
 void initBoard(){
     for(int i = 0; i < ROWS; ++i){
         for(int j = 0; j < COLUMNS; ++j){
-            board[i][j] = 0;
+            currboard[i][j] = 0;
         }
     }
-	board[3][3] = 1;
-	board[4][4] = 1;
-	board[4][3] = 2;
-	board[3][4] = 2;
+	currboard[3][3] = 1;
+	currboard[4][4] = 1;
+	currboard[4][3] = 2;
+	currboard[3][4] = 2;
 }
 
 //TODO: create more efficient function that uses recursion to update/check surrounding cells that were just updated.
-int findSpots(unsigned char* currboard[][COLUMNS], int* spots[][POSSI], bool turn){
+int findSpots( int* spots[][POSSI], bool turn){
 	unsigned char currPlayer = PLAYER1, enemy = PLAYER2;
 	if(turn){
 		currPlayer = PLAYER2;
@@ -347,12 +347,15 @@ int menu_tick(){
 #define MODERES if(mode == 0){\
                     p_state = init;\
                 }
-
+int ledMatrix_SM{
+	
+}
 int play_SM(){
     static play2_states p_state;
     static unsigned char max_cnt = 0;
     switch(p_state){
         case init:
+			MODERES
             else if(mode == 2){
                 p_state = findt;
             }
@@ -361,10 +364,14 @@ int play_SM(){
             }
             break;
         case findt:
-            p_state = find2;
+            MODERES
+            else{
+				p_state = find2;
+			}
             break;
         case find2:
-            if(max_cnt != 0){
+			MODERES
+            else if(max_cnt != 0){
                 p_state = wait_move;
             }
             else{
@@ -372,7 +379,8 @@ int play_SM(){
             }
             break;
         case wait_move:
-            if(ENTERB){
+            MODERES
+            else if(ENTERB){
                 p_state = place;
             }
             else if(NEXTB){
@@ -385,8 +393,41 @@ int play_SM(){
                 p_state = wait_move;
             }
             break;
-
-    }
+		case nextspot:
+			MODERES
+            else{
+				p_state = wait_move;
+			}
+			break;
+		case prevspot:
+			MODERES
+			else{
+				p_state = wait_move
+			}
+			break;
+		case place:
+			p_state = findt;
+			break;
+		case check_win:
+			MODERES
+			else if{end_count < 2)
+				p_state = findt;
+			}
+			else{
+				p_state = victory;
+			}
+		case victory:
+			MODERES
+			else{
+				p_state = victory;
+			}
+		}
+	switch(p_state){
+		case init:
+			initBoard();
+		case findt:
+			max_cnt = findspots();
+	}
 }
 
 
