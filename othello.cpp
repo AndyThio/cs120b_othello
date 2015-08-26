@@ -7,9 +7,17 @@
 #define PREVB P && !E && !N
 #define ENTERB E && !P && !N
 
+#define CBS currBoard[i][j]
 
 #define PLAYER1 1
 #define PLAYER2 2
+#define EMPTY 0
+#define BLUE 1
+#define RED 2
+#define BLUEP 3
+#define REDP 4
+#define BOTHP 5
+#define CURRSEL 6
 
 #define ROWS 8
 #define COLUMNS 8
@@ -343,11 +351,78 @@ int menu_tick(){
 			break;
 	}
 }
-enum matrixstates {
+
+void transmit_dataB(unsigned char data){
+    int i;
+    for(i= 0; i< 8 ; ++i) {
+        // Sets SRCLR to 1 allowing data to be set
+        // Also clears SRCLK in preparation of sending data
+        PORTB = 0x08;
+        // set SER = next bit of data to be sent.
+        PORTB|= ((data>> i) & 0x01);
+        // set SRCLK = 1. Rising edge shifts next bit of data into the shift register
+        PORTB|= 0x02;
+    }
+    // set RCLK = 1. Rising edge copies data from “Shift” register to “Storage” register
+    PORTB|= 0x04;
+    // clears all lines in preparation of a new transmission
+    PORTB= 0x00;
+}
+
+void transmit_dataC(unsigned char data){
+    int i;
+    for(i= 0; i< 8 ; ++i) {
+        // Sets SRCLR to 1 allowing data to be set
+        // Also clears SRCLK in preparation of sending data
+        PORTC = 0x08;
+        // set SER = next bit of data to be sent.
+        PORTC|= ((data>> i) & 0x01);
+        // set SRCLK = 1. Rising edge shifts next bit of data into the shift register
+        PORTC|= 0x02;
+    }
+    // set RCLK = 1. Rising edge copies data from “Shift” register to “Storage” register
+    PORTC|= 0x04;
+    // clears all lines in preparation of a new transmission
+    PORTC= 0x00;
+}
+
+
+#define LEDSET bluTemp = bluTemp << j;\
+                redTemp = redTemp << j;
 int ledMatrix_SM{
     for(int i = 0; i < ROWS; ++i){
+        unsigned char currRow = 0xFE;
+        unsigned char redDis = 0x00;
+        unsigned char bluDis = 0x00;
+        transmit_dataC(currRow << i);
         for(int j = 0; j < COLUMNS; ++j){
-
+            unsigned char bluTemp = 0x01;
+            unsigned char redTemp = 0x01;
+            if(CBS == BLUE){
+                LEDSET
+                bluDis |= bluTemp;
+                redDis &= ~redTemp;
+            }
+            else if(CBS == RED){
+                LEDSET
+                bluDis &= ~bluTemp;
+                redDis |= redTemp;
+            }
+            else if(CBS == BLUEP || CBS == REDP || CBS == BOTHP){
+                LEDSET
+                bluDis |= bluTemp;
+                redDis |= redTemp;
+            }
+            else{
+                bluTemp = ~(bluTemp << j);
+                redTemp = ~(redTemp << j);
+                bluDis &= bluTemp;
+                redDis &= redTemp;
+            }
+        }
+        transmit_dataB(bluDis);
+        PORTD = redDisp;
+    }
 }
 
 #define MODERES if(mode == 0){\
@@ -413,7 +488,7 @@ int play_SM(){
 			break;
 		case check_win:
 			MODERES
-			else if{end_count < 2)
+			else if(end_count < 2)
 				p_state = findt;
 			}
 			else{
