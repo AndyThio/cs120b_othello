@@ -212,7 +212,6 @@ int ledMatrix_SM(){
     return 0;
 }
 
-
 int main(void)
 {
     DDRB = 0x0F; PORTB = 0xF0;

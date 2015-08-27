@@ -2,12 +2,18 @@
 #include "timer.h"
 #include <stdio.h>
 
+#define ROWS 8
+#define COLUMNS 8
+#define POSSI 60
+unsigned char currboard[ROWS][COLUMNS];
+
+#define CBS currBoard[i][j]
+
 #define ALLB N && P && E
 #define NEXTB N && !P && !E
 #define PREVB P && !E && !N
 #define ENTERB E && !P && !N
 
-#define CBS currBoard[i][j]
 
 #define PLAYER1 1
 #define PLAYER2 2
@@ -19,17 +25,18 @@
 #define BOTHP 5
 #define CURRSEL 6
 
-#define ROWS 8
-#define COLUMNS 8
-#define POSSI 60
+//EEPROM Macros
+#define read_eeprom_word(address) eeprom_read_word ((const uint16_t*)address)
+#define write_eeprom_word(address,value) eeprom_write_word ((uint16_t*)address,(uint16_t)value)
+#define update_eeprom_word(address,value) eeprom_update_word ((uint16_t*)address,(uint16_t)value)
+unsigned char EEMEM eeprom_highscore;
 
 unsigned char difficulty = 0;
 unsigned char mode = 0;
 unsigned char lcdtext[32];
 
-unsigned char currboard[ROWS][COLUMNS];
 
-enum menu_SM {title, play2, play2Go, play1, play1Go, diffInc, diffDec, res, res_comfirm, reseted };
+enum menu_SM {title, play2, play2Go, play1, play1Go, diffInc, diffDec, res, res_comfirm, reseted } menuState;
 enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory};
 
 void initBoard(){
@@ -191,7 +198,6 @@ void clr_possi(unsigned char* currboard[][COLUMNS], int spots[][POSSI], int poss
 }
 
 int menu_tick(){
-	static menu_SM menuState;
 	switch(menuState){
 		case title:
 			if(N || P || E){
@@ -317,13 +323,13 @@ int menu_tick(){
 
 	switch(menuState){
 		case title:
-			lcdtext = "    Othello!      High Score: ";
+            LCD_DisplayString(1, strcat("    Othello!      High Score: ",read_eeprom_word(&eeprom_highscore)));
 			mode = 0;
 			difficulty = 0;
 			break;
 
 		case play2:
-			lcdtext = "   2 players       High Score: ";
+            LCD_DisplayString(1, strcat("   2 players       High Score: ",read_eeprom_word(&eeprom_highscore)));
 			difficulty = 0;
 			break;
 		case play2Go:
@@ -331,7 +337,7 @@ int menu_tick(){
 			difficulty = 0;
 			break;
 		case play1:
-		lcdtext = "    1 player       High Score: ";
+            LCD_DisplayString(1, strcat("    1 player       High Score: ",read_eeprom_word(&eeprom_highscore)));
 			break;
 		case play1Go:
 			mode = 1;
@@ -343,11 +349,14 @@ int menu_tick(){
 			difficulty--;
 			break;
 		case res:
+            LCD_DisplayString(1, strcat("Reset High Score  High Score: ",read_eeprom_word(&eeprom_highscore)));
 			break;
 		case res_comfirm:
+            LCD_DisplayString (1, " Confirm Reset   YES = N No = P");
 			break;
 		case reseted:
 			//reset eeprom;
+            update_eeprom_word(&eeprom_highscore, 0)
 			break;
 	}
 }
@@ -386,43 +395,97 @@ void transmit_dataC(unsigned char data){
     PORTC= 0x00;
 }
 
+enum matrix_States {start, display, bstate} ledDis;
 
-#define LEDSET bluTemp = bluTemp << j;\
-                redTemp = redTemp << j;
-int ledMatrix_SM{
-    for(int i = 0; i < ROWS; ++i){
-        unsigned char currRow = 0xFE;
-        unsigned char redDis = 0x00;
-        unsigned char bluDis = 0x00;
-        transmit_dataC(currRow << i);
-        for(int j = 0; j < COLUMNS; ++j){
-            unsigned char bluTemp = 0x01;
-            unsigned char redTemp = 0x01;
-            if(CBS == BLUE){
-                LEDSET
-                bluDis |= bluTemp;
-                redDis &= ~redTemp;
-            }
-            else if(CBS == RED){
-                LEDSET
-                bluDis &= ~bluTemp;
-                redDis |= redTemp;
-            }
-            else if(CBS == BLUEP || CBS == REDP || CBS == BOTHP){
-                LEDSET
-                bluDis |= bluTemp;
-                redDis |= redTemp;
-            }
-            else{
-                bluTemp = ~(bluTemp << j);
-                redTemp = ~(redTemp << j);
-                bluDis &= bluTemp;
-                redDis &= redTemp;
-            }
-        }
-        transmit_dataB(bluDis);
-        PORTD = redDisp;
+#define BLUSET bluTemp = bluTemp << j;
+#define REDSET redTemp = redTemp << j;
+int ledMatrix_SM(){
+    unsigned char currRow;
+    unsigned char redDis;
+    unsigned char bluDis;
+    unsigned char bluTemp;
+    unsigned char redTemp;
+    static int i;
+
+    switch(ledDis){
+        case start:
+            ledDis = display;
+            break;
+        case display:
+            ledDis = bstate;
+            break;
+        case bstate:
+            ledDis = display;
+            break;
+        default:
+            ledDis = start;
+            break;
     }
+    switch(ledDis){
+        case start:
+            i = 0;
+            break;
+        case display:
+            currRow = 0x01;
+            redDis = 0x00;
+            bluDis = 0x00;
+            transmit_dataC(currRow << i);
+            for(int j = 0; j < COLUMNS; ++j){
+                redTemp = 0x01;
+                if(CBS == BLUE){
+                    REDSET
+                    redDis &= ~redTemp;
+                }
+                else if(CBS == RED){
+                    REDSET
+                    redDis |= redTemp;
+                }
+                else if(CBS == BLUEP || CBS == REDP || CBS == BOTHP){
+                    REDSET
+                    redDis |= redTemp;
+                }
+                else{
+                    redTemp = ~(redTemp << j);
+                    redDis &= redTemp;
+                }
+            }
+            transmit_dataB(~bluDis);
+            PORTD = ~redDis;
+            i++;
+            if(i >= ROWS){
+                i = 0;
+            }
+            break;
+
+        case bstate:
+            currRow = 0x01;
+            redDis = 0x00;
+            bluDis = 0x00;
+            transmit_dataC(currRow << i);
+            for(int j = 0; j < COLUMNS; ++j){
+                bluTemp = 0x01;
+                if(CBS == BLUE){
+                    BLUSET
+                    bluDis |= bluTemp;
+                }
+                else if(CBS == RED){
+                    BLUSET
+                    bluDis &= ~bluTemp;
+                }
+                else if(CBS == BLUEP || CBS == REDP || CBS == BOTHP){
+                    BLUSET
+                    bluDis |= bluTemp;
+                }
+                else{
+                    bluTemp = ~(bluTemp << j);
+                    bluDis &= bluTemp;
+                }
+            }
+            transmit_dataB(~bluDis);
+            PORTD = ~redDis;
+            break;
+    }
+    return 0;
 }
 
 #define MODERES if(mode == 0){\
