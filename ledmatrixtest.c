@@ -140,6 +140,7 @@ int ledMatrix_SM(){
             break;
         case bstate:
             ledDis = display;
+            break;
         default:
             ledDis = start;
             break;
@@ -180,7 +181,7 @@ int ledMatrix_SM(){
             }
             break;
 
-            case bstate:
+        case bstate:
             currRow = 0x01;
             redDis = 0x00;
             bluDis = 0x00;
@@ -206,6 +207,7 @@ int ledMatrix_SM(){
             }
             transmit_dataB(~bluDis);
             PORTD = ~redDis;
+            break;
     }
     return 0;
 }
@@ -218,13 +220,10 @@ int main(void)
     DDRD = 0xFF; PORTD = 0x00;
     for(int i = 0; i < ROWS; ++i){
         for(int j = 0; j < COLUMNS; ++j){
-            currboard[i][j] = (i+j)%5;
-            if(j%2 == 0){
-                currboard[i][j] = BLUE;
-            }
+            currboard[i][j] = BLUE;
         }
     }
-    TimerSet(100);
+    TimerSet(5);
     TimerOn();
     while(1)
     {
