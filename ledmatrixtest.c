@@ -119,58 +119,93 @@ void transmit_dataC(unsigned char data){
     PORTC= 0x00;
 }
 
-enum matrix_States {start, display};
-#define LEDSET bluTemp = bluTemp << j;\
-                redTemp = redTemp << j;
+enum matrix_States {start, display, bstate} ledDis;
+
+#define BLUSET bluTemp = bluTemp << j;
+#define REDSET redTemp = redTemp << j;
 int ledMatrix_SM(){
-    static matrix_States ledDis;
+    unsigned char currRow;
+    unsigned char redDis;
+    unsigned char bluDis;
+    unsigned char bluTemp;
+    unsigned char redTemp;
+    static int i;
+
     switch(ledDis){
         case start:
             ledDis = display;
             break;
         case display:
-            ledDis = display;
+            ledDis = bstate;
             break;
-        default:
+        case bstate:
             ledDis = display;
+        default:
+            ledDis = start;
             break;
     }
     switch(ledDis){
         case start:
+            i = 0;
             break;
         case display:
-            unsigned char currRow = 0xFE;
-            unsigned char redDis = 0x00;
-            unsigned char bluDis = 0x00;
+            currRow = 0x01;
+            redDis = 0x00;
+            bluDis = 0x00;
             transmit_dataC(currRow << i);
             for(int j = 0; j < COLUMNS; ++j){
-                unsigned char bluTemp = 0x01;
-                unsigned char redTemp = 0x01;
+                redTemp = 0x01;
                 if(CBS == BLUE){
-                    LEDSET
-                    bluDis |= bluTemp;
+                    REDSET
                     redDis &= ~redTemp;
                 }
                 else if(CBS == RED){
-                    LEDSET
-                    bluDis &= ~bluTemp;
+                    REDSET
                     redDis |= redTemp;
                 }
                 else if(CBS == BLUEP || CBS == REDP || CBS == BOTHP){
-                    LEDSET
-                    bluDis |= bluTemp;
+                    REDSET
                     redDis |= redTemp;
                 }
                 else{
-                    bluTemp = ~(bluTemp << j);
                     redTemp = ~(redTemp << j);
-                    bluDis &= bluTemp;
                     redDis &= redTemp;
                 }
             }
-            transmit_dataB(bluDis);
-            PORTD = redDis;
+            transmit_dataB(~bluDis);
+            PORTD = ~redDis;
+            i++;
+            if(i >= ROWS){
+                i = 0;
+            }
             break;
+
+            case bstate:
+            currRow = 0x01;
+            redDis = 0x00;
+            bluDis = 0x00;
+            transmit_dataC(currRow << i);
+            for(int j = 0; j < COLUMNS; ++j){
+                bluTemp = 0x01;
+                if(CBS == BLUE){
+                    BLUSET
+                    bluDis |= bluTemp;
+                }
+                else if(CBS == RED){
+                    BLUSET
+                    bluDis &= ~bluTemp;
+                }
+                else if(CBS == BLUEP || CBS == REDP || CBS == BOTHP){
+                    BLUSET
+                    bluDis |= bluTemp;
+                }
+                else{
+                    bluTemp = ~(bluTemp << j);
+                    bluDis &= bluTemp;
+                }
+            }
+            transmit_dataB(~bluDis);
+            PORTD = ~redDis;
     }
     return 0;
 }
@@ -178,12 +213,18 @@ int ledMatrix_SM(){
 
 int main(void)
 {
+    DDRB = 0x0F; PORTB = 0xF0;
+    DDRC = 0x0F; PORTC = 0xF0;
+    DDRD = 0xFF; PORTD = 0x00;
     for(int i = 0; i < ROWS; ++i){
         for(int j = 0; j < COLUMNS; ++j){
             currboard[i][j] = (i+j)%5;
+            if(j%2 == 0){
+                currboard[i][j] = BLUE;
+            }
         }
     }
-    TimerSet(10);
+    TimerSet(100);
     TimerOn();
     while(1)
     {
