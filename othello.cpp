@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "io.c"
 #include <avr/eeprom.h>
+#include <avr/sleep.h>
 
 #define ROWS 8
 #define COLUMNS 8
@@ -762,7 +763,7 @@ int play_SM(int p_state){
             countWait = 0;
             break;
 		case findt:
-			max_cnt = findspots();
+			max_cnt = findSpots();
             countWait = 0;
             break;
         case find2:
@@ -789,7 +790,7 @@ int play_SM(int p_state){
             break;
         case place:
             currboard[spots[0][countWait]][spots[1][countWait]] = turn+1;
-            flip_chip(countWait);
+            flipchip(countWait);
             turn++;
             break;
         case check_win:
