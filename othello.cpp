@@ -38,9 +38,29 @@ unsigned char difficulty = 0;
 unsigned char mode = 0;
 unsigned char lcdtext[32];
 
+typedef struct task{
+    int state;
+    unsigned long period;
+    unsigned long elapsedTime;
+    int (*TickFct)(int);
+} task;
+
+const unsigned long tasksPeriodGCD = 1;
 
 enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory};
+enum menu_SM {initm, title, play2, play2Go, play1, play1Go, diffInc, diffDec, res, res_comfirm, reseted };
+enum matrix_States {start, display, bstate};
 
+void TimerISR(){
+    unsigned char i;
+    for(i = 0; i < taskNum; ++i){
+        if(tasks[i].elapsedTime >= tasks[i].period){
+            tasks[i].state = tasks[i].TickFct(tasks[i].state);
+            tasks[i].elapsedTime = 0;
+        }
+        tasks[i].elapsedTime += tasksPeriodGCD;
+    }
+}
 void initBoard(){
     for(int i = 0; i < ROWS; ++i){
         for(int j = 0; j < COLUMNS; ++j){
@@ -199,13 +219,12 @@ void clr_possi(unsigned char* currboard[][COLUMNS], int spots[][POSSI], int poss
 	}
 }
 
-enum menu_SM {initm, title, play2, play2Go, play1, play1Go, diffInc, diffDec, res, res_comfirm, reseted } menuState;
 
 #define DISPLAYHS   LCD_Cursor(30);\
                     LCD_WriteData(hs/10+'0');\
                     LCD_Cursor(31);\
                     LCD_WriteData(hs/10+'0');
-int menu_tick(){
+int menu_tick(int menuState){
     static unsigned char hs;
 	switch(menuState){
         case initm:
@@ -437,11 +456,10 @@ void transmit_dataC(unsigned char data){
     PORTC= 0x00;
 }
 
-enum matrix_States {start, display, bstate} ledDis;
 
 #define BLUSET bluTemp = bluTemp << j;
 #define REDSET redTemp = redTemp << j;
-int ledMatrix_SM(){
+int ledMatrix_SM(int ledDis){
     unsigned char currRow;
     unsigned char redDis;
     unsigned char bluDis;
@@ -527,13 +545,13 @@ int ledMatrix_SM(){
             PORTD = ~redDis;
             break;
     }
-    return 0;
+    return ledDis;
 }
 
 #define MODERES if(mode == 0){\
                     p_state = init;\
                 }
-int play_SM(){
+int play_SM(int p_state){
     static play2_states p_state;
     static unsigned char max_cnt = 0;
     switch(p_state){
@@ -611,9 +629,27 @@ int play_SM(){
 		case findt:
 			max_cnt = findspots();
 	}
+    return p_state;
 }
 
-
+task tasks[3];
+const unsigned short taskNum = 3;
+#define TASKINIT(taski,initstate, periodi, tf) tasks[taski].state = initstate;\
+                       tasks[taski].period = periodi;\
+                       tasks[taski].elapsedTime = tasks[taski].period; \
+                       tasks[taski].TickFct = & tf;\
+                       taski ++;
 main(void){
+    unsigned char currSM = 0;
+    TASKINIT(currSM,initm,100,menu_tick)
+    TASKINIT(currSM,init, 100,play_SM)
+    TASKINIT(currSM,start,1,ledMatrix_SM)
 
+    TimerSet(tasksPeriodGCD);
+    TimerOn();
+
+    while(1){
+        Sleep();
+    }
+    return 0;
 }
