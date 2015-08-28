@@ -42,6 +42,7 @@ unsigned char EEMEM eeprom_highscore;
 unsigned char difficulty = 0;
 unsigned char mode = 0;
 unsigned char turn =0;
+unsigned char gg = 0;
 unsigned char lcdtext[32];
 
 typedef struct task{
@@ -234,7 +235,7 @@ int flipTR(const int x, const int y, const int color, const int incx,const int i
     if(color == RED){
         enemy = BLUE;
     }
-    if( !(x<ROWS&&y<COLUMNS)){
+    if( !(x<ROWS||y<COLUMNS)){
         return 0;
     }
     else if(currboard[x][y] == color){
@@ -346,7 +347,7 @@ int menu_tick(int menuState){
 			if(ALLB){
 				menuState = initm;
 			}
-            else if(prevturn != turn){
+            else if(prevturn != turn || gg){
                 menuState = countchips;
             }
 			else{
@@ -396,7 +397,7 @@ int menu_tick(int menuState){
 			if(ALLB){
 				menuState = initm;
 			}
-            else if(prevturn != turn){
+            else if(prevturn != turn || gg){
                 menuState = countchips;
             }
 			else{
@@ -414,7 +415,7 @@ int menu_tick(int menuState){
             else if(mode == 2){
                 menuState = play2Go;
             }
-            else if(mode == 3){
+            else if( 3){
                 menuState = vic_screen;
             }
             else{
@@ -540,7 +541,7 @@ int menu_tick(int menuState){
 			mode = 1;
 			break;
         case countchips:
-            if(mode == 3){
+            if(gg){
                 if(turn == 0){
                     LCD_DisplayString(1,"   Blue Wins!   Blue:    Red:");
                 }
@@ -800,6 +801,7 @@ int play_SM(int p_state){
 	switch(p_state){
 		case init:
 			initBoard();
+            gg = 0;
             max_cnt =0;
             countPlay = 0;
             countWait = 0;
@@ -841,7 +843,7 @@ int play_SM(int p_state){
             break;
         case victory:
             changeturn
-            mode = 3;
+            gg = 1;
             break;
 	}
     return p_state;
