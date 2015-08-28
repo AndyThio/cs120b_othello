@@ -27,6 +27,7 @@ unsigned char currboard[ROWS][COLUMNS];
 #define REDP 4
 #define BOTHP 5
 #define CURRSEL 6
+#define changeturn turn = (turn+1)%2;
 
 //EEPROM Macros
 #define read_eeprom_word(address) eeprom_read_word ((const uint16_t*)address)
@@ -36,6 +37,7 @@ unsigned char EEMEM eeprom_highscore;
 
 unsigned char difficulty = 0;
 unsigned char mode = 0;
+unsigned char turn =0;
 unsigned char lcdtext[32];
 
 typedef struct task{
@@ -48,7 +50,7 @@ typedef struct task{
 const unsigned long tasksPeriodGCD = 1;
 
 enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory};
-enum menu_SM {initm, title, play2, play2Go, play1, play1Go, diffInc, diffDec, res, res_comfirm, reseted };
+enum menu_SM {initm, title, play2, play2Go, play1, play1Go,countchips, diffInc, diffDec, res, res_comfirm, reseted };
 enum matrix_States {start, display, bstate};
 
 void TimerISR(){
@@ -219,6 +221,17 @@ void clr_possi(unsigned char* currboard[][COLUMNS], int spots[][POSSI], int poss
 	}
 }
 
+unsigned char chipNum(int color){
+    int chipCount = 0;
+    for(int i = 0; i < ROWS; ++i){
+        for(int j = 0; j < COLUMNS; ++j){
+            if(currboard[i][j] == color){
+                 chipCount++;
+            }
+        }
+    }
+    return chipCount;
+}
 
 #define DISPLAYHS   LCD_Cursor(30);\
                     LCD_WriteData(hs/10+'0');\
@@ -226,6 +239,8 @@ void clr_possi(unsigned char* currboard[][COLUMNS], int spots[][POSSI], int poss
                     LCD_WriteData(hs/10+'0');
 int menu_tick(int menuState){
     static unsigned char hs;
+    static unsigned char prevturn;
+    unsigned char countedchips;
 	switch(menuState){
         case initm:
             if(!N && !P && !ENT){
@@ -272,6 +287,9 @@ int menu_tick(int menuState){
 			if(ALLB){
 				menuState = initm;
 			}
+            else if(prevturn != turn){
+                menuState = countchips;
+            }
 			else{
 				menuState = play2Go;
 			}
@@ -304,11 +322,28 @@ int menu_tick(int menuState){
 			if(ALLB){
 				menuState = initm;
 			}
+            else if(prevturn != turn){
+                menuState = countchips;
+            }
 			else{
 				menuState = play1Go;
 			}
 		break;
 
+        case countchips:
+            if(ALLB){
+                menuState = initm;
+            }
+            else if(mode == 1){
+                menuState = play1Go;
+            }
+            else if(mode == 2){
+                menuState = play2Go;
+            }
+            else{
+                menuState = initm;
+            }
+            break;
         case diffInc:
             if(difficulty <= 2){
                 menuState = play1;
@@ -415,6 +450,23 @@ int menu_tick(int menuState){
 		case play1Go:
 			mode = 1;
 			break;
+        case chipcount:
+            if(turn == 0){
+                LCD_DisplayString(1,"   Turn: Blue   Blue:    Red:");
+            }
+            else{
+                LCD_DisplayString(1,"   Turn: Red    Blue:    Red:");
+            }
+            countedchips = chipNum(BLUE);
+            LCD_Cursor(22);
+            LCD_WriteData(countedchips/10+'0');
+            LCD_Cursor(23);
+            LCD_WriteData(countedchips%10+'0');
+            countedchips = chipNum(RED);
+            LCD_Cursor(30);
+            LCD_WriteData(countedchips/10+'0');
+            LCD_WriteData(countedchips%10+'0');
+            break;
 		case diffInc:
 			difficulty++;
 			break;
@@ -430,6 +482,7 @@ int menu_tick(int menuState){
             update_eeprom_word(&eeprom_highscore, 0);
 			break;
 	}
+    prevturn = turn;
     return menuState;
 }
 
