@@ -648,6 +648,7 @@ int menu_tick(int menuState){
 			difficulty--;
 			break;
 		case res:
+            difficulty = 1;
 			break;
 		case res_comfirm:
 			break;
