@@ -56,7 +56,7 @@ const unsigned short taskNum = 3;
 const unsigned long tasksPeriodGCD = 1;
 
 enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory};
-enum menu_SM {initm, title, play2, play2Go, play1, play1Go,countchips, diffInc, diffDec, res, res_comfirm, reseted, vic_screen };
+enum menu_SM {initm,pretitle, title, play2, play2Go, play1, play1Go,countchips, diffInc, diffDec, res, res_comfirm, reseted, vic_screen };
 enum matrix_States {start, display, bstate};
 
 void TimerISR(){
@@ -283,12 +283,15 @@ int menu_tick(int menuState){
     unsigned char countedchipsB;
 	switch(menuState){
         case initm:
+            menuState = pretitle;
+            LCD_DisplayString(1, "    Othello!     Press Any Key");
+            break;
+        case pretitle:
             if(!N && !P && !ENT){
                 menuState = title;
-                LCD_DisplayString(1, "    Othello!     Press Any Key");
             }
             else{
-                menuState = initm;
+                menuState = pretitle;
             }
             break;
 		case title:
