@@ -818,10 +818,10 @@ int play_SM(int p_state){
             else if(max_cnt == 0){
                 p_state = check_win;
             }
-            else if(((mode == 2) && max_cnt)||((mode == 1) && (turn+1 == BLUE) && max_cnt)){
+            else if(((mode == 2) && max_cnt)||((mode == 1) && ((turn+1) == BLUE) && max_cnt)){
                 p_state = wait_move;
             }
-            else if((mode == 1) && (turn + 1 == RED) && max_cnt){
+            else if((mode == 1) && ((turn + 1) == RED) && max_cnt){
                 p_state = ai_calc;
             }
             else{
