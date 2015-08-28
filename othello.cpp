@@ -61,11 +61,11 @@ enum matrix_States {start, display, bstate};
 void TimerISR(){
     unsigned char i;
     for(i = 0; i < taskNum; ++i){
-        if(task[i].elapsedTime >= task[i].period){
-            task[i].state = task[i].TickFct(task[i].state);
-            task[i].elapsedTime = 0;
+        if(tasks[i].elapsedTime >= tasks[i].period){
+            tasks[i].state = tasks[i].TickFct(tasks[i].state);
+            tasks[i].elapsedTime = 0;
         }
-        task[i].elapsedTime += tasksPeriodGCD;
+        tasks[i].elapsedTime += tasksPeriodGCD;
     }
 }
 void initBoard(){
@@ -682,7 +682,7 @@ int ledMatrix_SM(int ledDis){
                     p_state = init;\
                 }
 int play_SM(int p_state){
-    static unsigned char max_cnt, countPlay;
+    static unsigned char max_cnt, countPlay, countWait;
     switch(p_state){
         case init:
 			MODERES
@@ -769,17 +769,17 @@ int play_SM(int p_state){
             break;
         case wait_move:
             countPlay = 0;
-            cb[spots[0][countWait]][spots[1][countWait]] = BOTHP;
+            currboard[spots[0][countWait]][spots[1][countWait]] = BOTHP;
             break;
         case nextspot:
-            cb[spots[0][countWait]][spots[1][countWait]] = EMPTY;
+            currboard[spots[0][countWait]][spots[1][countWait]] = EMPTY;
             countWait++;
             if(countWait >max_cnt){
-                count = 0;
+                countWait = 0;
             }
             break;
         case prevspot:
-            cb[spots[0][countWait]][spots[1][countWait]] = EMPTY;
+            currboard[spots[0][countWait]][spots[1][countWait]] = EMPTY;
             if(countWait == 0){
                 countWait = max_cnt -1;
             }
@@ -788,7 +788,7 @@ int play_SM(int p_state){
             }
             break;
         case place:
-            cb[spots[0][countWait]][spots[1][countWait]] = turn+1;
+            currboard[spots[0][countWait]][spots[1][countWait]] = turn+1;
             flip_chip(countWait);
             turn++;
             break;
