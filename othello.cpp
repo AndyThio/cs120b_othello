@@ -503,6 +503,7 @@ int menu_tick(int menuState){
                 else{
                     LCD_DisplayString(1,"   Red Wins!    Blue:    Red:");
                 }
+            }
             else{
                 if(turn == 0){
                     LCD_DisplayString(1,"   Turn: Blue   Blue:    Red:");
@@ -678,7 +679,6 @@ int ledMatrix_SM(int ledDis){
                     p_state = init;\
                 }
 int play_SM(int p_state){
-    static play2_states p_state;
     static unsigned char max_cnt, countPlay;
     switch(p_state){
         case init:
