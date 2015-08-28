@@ -7,7 +7,9 @@
 
 
 #include <avr/io.h>
+#include "io.c"
 #include <avr/interrupt.h>
+#include <avr/eeprom.h>
 
 #define ROWS 8
 #define COLUMNS 8
@@ -24,15 +26,17 @@ unsigned char currboard[ROWS][COLUMNS];
 #define REDP 4
 #define BOTHP 5
 #define CURRSEL 6
+#define changeturn turn = (turn+1)%2
 
-#define ALLB N && P && E
-#define NEXTB N && !P && !E
-#define PREVB P && !E && !N
-#define ENTERB E && !P && !N
+#define N !(PINB & 0x40)
+#define P !(PINB & 0x20)
+#define ENT !(PINB & 0x80)
+#define ALLB N && P && ENT
+#define NEXTB N && !P && !ENT
+#define PREVB P && !ENT && !N
+#define ENTERB ENT && !P && !N
+ unsigned char turn =0;
 
-#define N PINB & 0x40
-#define P PINB & 0x20
-#define E PINB & 0x80
 
 //EEPROM Macros
 #define read_eeprom_word(address) eeprom_read_word ((const uint16_t*)address)
@@ -137,168 +141,271 @@ void transmit_dataC(unsigned char data){
     PORTC= 0x00;
 }
 
+enum menu_SM {initm, title, play2, play2Go, play1, play1Go, diffInc, diffDec,countchips, res, res_comfirm, reseted } menuState;
+
+unsigned char chipNum(int color){
+    int chipCount = 0;
+    for(int i = 0; i < ROWS; ++i){
+        for(int j = 0; j < COLUMNS; ++j){
+            if(currboard[i][j] == color){
+                chipCount++;
+            }
+        }
+    }
+    return chipCount;
+}
+
+#define DISPLAYHS   LCD_Cursor(30);\
+LCD_WriteData(hs/10+'0');\
+LCD_Cursor(31);\
+LCD_WriteData(hs%10+'0');
 int menu_tick(){
+    static unsigned char hs;
+    static unsigned char prevturn;
+    unsigned char countedchips;
     switch(menuState){
+        case initm:
+        if(!N && !P && !ENT){
+            menuState = title;
+            LCD_DisplayString(1, "    Othello!     Press Any Key");
+        }
+        else{
+            menuState = initm;
+        }
         case title:
-            if(N || P || E){
-                menuState = play2;
-            }
-            else{
-                menuState = title;
-            }
+        if(N || P || ENT){
+            menuState = play2;
+            LCD_DisplayString(1, "   2 players     High Score: ");
+            DISPLAYHS
+        }
+        else{
+            menuState = title;
+        }
         break;
 
         case play2:
-            if(ALLB){
-                menuState = title;
-            }
-            else if (NEXTB){
-                menuState = play1;
-            }
-            else if (PREVB){
-                menuState = res;
-            }
-            else if (ENTERB){
-                menuState = play2Go;
-            }
-            else{
-                menuState = play2;
-            }
-        break;
-
-        case play2Go:
-            if(ALLB){
-                menuState = title;
-            }
-            else{
-                menuState = play2Go;
-            }
-        break;
-
-        case play1:
-            if(ALLB){
-                menuState = title;
-            }
-            else if (NEXTB){
-                menuState = diffInc;
-            }
-            else if (PREVB){
-                menuState = diffDec;
-            }
-            else if (ENTERB){
-                menuState = play1Go;
-            }
-            else{
-                menuState = play1;
-            }
-        break;
-
-        case play1Go:
-            if(ALLB){
-                menuState = title;
-            }
-            else{
-                menuState = play1Go;
-            }
-        break;
-
-        case diffInc:
-            if(difficulty <= 2){
-                menuState = play1;
-            }
-            else if(difficulty > 2){
-                menuState = res;
-            }
-            else {
-                menuState = title;
-            }
-            break;
-
-        case diffDec:
+        if(ALLB){
+            menuState = initm;
+        }
+        else if (NEXTB){
             menuState = play1;
-            break;
+            LCD_DisplayString(1, " 1 player Easy   High Score: ");
+            DISPLAYHS
+        }
+        else if (PREVB){
+            menuState = res;
+            LCD_DisplayString(1, "Reset High Score High Score: ");
+            DISPLAYHS
+        }
+        else if (ENTERB){
+            menuState = play2Go;
+        }
+        else{
+            menuState = play2;
+        }
+        break;
+
+        case play2Go:
+        if(ALLB){
+            menuState = initm;
+        }
+        else if(prevturn != turn){
+            menuState = countchips;
+        }
+        else{
+            menuState = play2Go;
+        }
+        break;
+
+        case play1:
+        if(ALLB){
+            menuState = initm;
+        }
+        else if (NEXTB){
+            menuState = diffInc;
+        }
+        else if (PREVB && difficulty >0){
+            menuState = diffDec;
+        }
+        else if (PREVB && difficulty == 0){
+            menuState = play2;
+            LCD_DisplayString(1, "   2 players     High Score: ");
+            DISPLAYHS
+        }
+        else if (ENTERB){
+            menuState = play1Go;
+        }
+        else{
+            menuState = play1;
+        }
+        break;
+
+        case play1Go:
+        if(ALLB){
+            menuState = initm;
+        }
+        else if(prevturn != turn){
+            menuState = countchips;
+        }
+        else{
+            menuState = play1Go;
+        }
+        break;
+
+        case countchips:
+        if(ALLB){
+            menuState = initm;
+        }
+        else if(mode == 1){
+            menuState = play1Go;
+        }
+        else if(mode == 2){
+            menuState = play2Go;
+        }
+        else{
+            menuState = initm;
+        }
+        break;
+        case diffInc:
+        if(difficulty <= 2){
+            menuState = play1;
+            if(difficulty == 2){
+                LCD_DisplayString(1, " 1 player Hard   High Score: ");
+                DISPLAYHS
+            }
+            else if(difficulty == 1){
+                LCD_DisplayString(1, " 1 player Med.   High Score: ");
+                DISPLAYHS
+            }
+        }
+        else if(difficulty > 2){
+            menuState = res;
+            LCD_DisplayString(1, "Reset High Score High Score: ");
+            DISPLAYHS
+        }
+        else {
+            menuState = initm;
+        }
+        break;
+
+        case diffDec:
+        menuState = play1;
+        if(difficulty == 0){
+            LCD_DisplayString(1, " 1 player Easy   High Score: ");
+            DISPLAYHS
+        }
+        else if(difficulty == 1){
+            LCD_DisplayString(1, " 1 player Med.   High Score: ");
+            DISPLAYHS
+        }
+        break;
 
         case res:
-            if(NEXTB){
-                menuState = play2;
-            }
-            else if (ENTERB){
-                menuState = res_comfirm;
-            }
-            else if (ALLB){
-                menuState = title;
-            }
-            else if(PREVB){
-                menuState = play1;
-            }
-            else {
-                menuState = res;
-            }
-            break;
+        if(NEXTB){
+            menuState = play2;
+            LCD_DisplayString(1, "   2 players     High Score: ");
+            DISPLAYHS
+        }
+        else if (ENTERB){
+            menuState = res_comfirm;
+            LCD_DisplayString(1, " Confirm Reset? Yes=Next No=Prev");
+        }
+        else if (ALLB){
+            menuState = initm;
+        }
+        else if(PREVB){
+            menuState = play1;
+            LCD_DisplayString(1, " 1 player Hard   High Score: ");
+            DISPLAYHS
+        }
+        else {
+            menuState = res;
+        }
+        break;
 
         case res_comfirm:
-            if(NEXTB){
-                menuState = reseted;
-            }
-            else if (PREVB){
-                menuState = res;
-            }
-            else if (ALLB){
-                menuState = title;
-            }
-            else{
-                menuState = res_comfirm;
-            }
-            break;
+        if(NEXTB){
+            menuState = reseted;
+            LCD_ClearScreen;
+            LCD_DisplayString(1,"High Score Reset Press Any Key");
+        }
+        else if (PREVB){
+            menuState = res;
+            LCD_DisplayString(1, "Reset High Score High Score: ");
+            DISPLAYHS
+        }
+        else if (ALLB){
+            menuState = initm;
+        }
+        else{
+            menuState = res_comfirm;
+        }
+        break;
 
         case reseted:
-            if(N || B || P){
-                menuState = title;
-            }
-            else{
-                menuState = reseted;
-            }
-            break;
+        if(N || ENT || P){
+            menuState = initm;
+        }
+        else{
+            menuState = reseted;
+        }
+        break;
     }
 
     switch(menuState){
+        case initm:
+        hs = read_eeprom_word(&eeprom_highscore);
         case title:
-            LCD_DisplayString(1, strcat("    Othello!      High Score: ",read_eeprom_word(&eeprom_highscore)));
-            mode = 0;
-            difficulty = 0;
-            break;
+        mode = 0;
+        difficulty = 0;
+        break;
 
         case play2:
-            LCD_DisplayString(1, strcat("   2 players       High Score: ",read_eeprom_word(&eeprom_highscore)));
-            difficulty = 0;
-            break;
+        difficulty = 0;
+        break;
         case play2Go:
-            mode = 2;
-            difficulty = 0;
-            break;
+        mode = 2;
+        difficulty = 0;
+        break;
         case play1:
-            LCD_DisplayString(1, strcat("    1 player       High Score: ",read_eeprom_word(&eeprom_highscore)));
-            break;
+        break;
         case play1Go:
-            mode = 1;
-            break;
+        mode = 1;
+        break;
+        case countchips:
+        if(turn == 0){
+            LCD_DisplayString(1,"   Turn: Blue   Blue:    Red:");
+        }
+        else{
+            LCD_DisplayString(1,"   Turn: Red    Blue:    Red:");
+        }
+        countedchips = chipNum(BLUE);
+        LCD_Cursor(22);
+        LCD_WriteData(countedchips/10+'0');
+        LCD_Cursor(23);
+        LCD_WriteData(countedchips%10+'0');
+        countedchips = chipNum(RED);
+        LCD_Cursor(30);
+        LCD_WriteData(countedchips/10+'0');
+        LCD_WriteData(countedchips%10+'0');
+        break;
         case diffInc:
-            difficulty++;
-            break;
+        difficulty++;
+        break;
         case diffDec:
-            difficulty--;
-            break;
+        difficulty--;
+        break;
         case res:
-            LCD_DisplayString(1, strcat("Reset High Score  High Score: ",read_eeprom_word(&eeprom_highscore)));
-            break;
+        break;
         case res_comfirm:
-            LCD_DisplayString (1, " Confirm Reset   YES = N No = P");
-            break;
+        break;
         case reseted:
-            //reset eeprom;
-            update_eeprom_word(&eeprom_highscore, 0)
-            break;
+        //reset eeprom;
+        update_eeprom_word(&eeprom_highscore, 0);
+        break;
     }
+    prevturn = turn;
+    return menuState;
 }
 
 enum matrix_States {start, display, bstate} ledDis;
@@ -393,29 +500,43 @@ int ledMatrix_SM(){
     }
     return 0;
 }
+int test =0;
+void idisplay(){
+    if(!test){
+        LCD_DisplayString(1,"    Othello!      High Score: ");
+    }
+    test = 1;
+}
 
 int main(void)
 {
     DDRA = 0xFF; PORTA = 0x00;
-    DDRB = 0x0F; PORTB = 0xF0;
+    DDRB = 0x0F; PORTB = 0x0F;
     DDRC = 0xFF; PORTC = 0x00;
     DDRD = 0xFF; PORTD = 0x00;
     for(int i = 0; i < ROWS; ++i){
         for(int j = 0; j < COLUMNS; ++j){
-            currboard[i][j] = BLUE;
+            currboard[i][j] = (i+j)%5;
         }
     }
     unsigned char count = 0;
-    TimerSet(5);
+    TimerSet(1);
     TimerOn();
+    LCD_init();
+    unsigned char changed =0;
     while(1)
     {
+
+        ledMatrix_SM();
         if(count >= 100){
             menu_tick();
             count = 0;
         }
+        if(menuState == play2Go && !changed){
+            changeturn;
+            changed++;
+        }
         count++;
-        ledMatrix_SM();
         while(!TimerFlag);
         TimerFlag = 0;
     }
