@@ -236,7 +236,7 @@ unsigned char chipNum(int color){
 #define DISPLAYHS   LCD_Cursor(30);\
                     LCD_WriteData(hs/10+'0');\
                     LCD_Cursor(31);\
-                    LCD_WriteData(hs/10+'0');
+                    LCD_WriteData(hs%10+'0');
 int menu_tick(int menuState){
     static unsigned char hs;
     static unsigned char prevturn;
