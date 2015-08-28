@@ -790,7 +790,7 @@ int play_SM(int p_state){
             break;
         case place:
             currboard[spots[0][countWait]][spots[1][countWait]] = turn+1;
-            flipchip(countWait);
+            flipchip(countWait,turn);
             turn++;
             break;
         case check_win:
