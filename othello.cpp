@@ -569,7 +569,7 @@ int menu_tick(int menuState){
             LCD_Cursor(30);
             LCD_WriteData(countedchipsR/10+'0');
             LCD_WriteData(countedchipsR%10+'0');
-            if(mode==3 && ((countedchipsR > countedchipsB)==turn)){
+            if(gg){
                 if(hs < countedchipsR){
                     update_eeprom_word(&eeprom_highscore, countedchipsR);
                 }
