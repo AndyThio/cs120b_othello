@@ -1,11 +1,13 @@
 #include <avr/io.h>
 #include "timer.h"
 #include <stdio.h>
+#include "io.c"
 
 #define ROWS 8
 #define COLUMNS 8
 #define POSSI 60
 unsigned char currboard[ROWS][COLUMNS];
+unsigned char spots[2][POSSI];
 
 #define CBS currBoard[i][j]
 
@@ -50,7 +52,7 @@ typedef struct task{
 const unsigned long tasksPeriodGCD = 1;
 
 enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory};
-enum menu_SM {initm, title, play2, play2Go, play1, play1Go,countchips, diffInc, diffDec, res, res_comfirm, reseted };
+enum menu_SM {initm, title, play2, play2Go, play1, play1Go,countchips, diffInc, diffDec, res, res_comfirm, reseted, vic_screen };
 enum matrix_States {start, display, bstate};
 
 void TimerISR(){
@@ -76,7 +78,7 @@ void initBoard(){
 }
 
 //TODO: create more efficient function that uses recursion to update/check surrounding cells that were just updated.
-int findSpots( int* spots[][POSSI], bool turn){
+int findSpots(){
 	unsigned char currPlayer = PLAYER1, enemy = PLAYER2;
 	if(turn){
 		currPlayer = PLAYER2;
@@ -212,6 +214,37 @@ int findSpots( int* spots[][POSSI], bool turn){
 	}
 	return foundSpots;
 }
+void flipchip(const int count,const int currturn){
+    flipTR(spots[0][count]+1,spots[1][count]+1,currturn+1,1,1);
+    flipTR(spots[0][count]-1,spots[1][count]+1,currturn+1,-1,1);
+    flipTR(spots[0][count]+1,spots[1][count]-1,currturn+1,1,-1);
+    flipTR(spots[0][count]-1,spots[1][count]-1,currturn+1,-1,-1);
+    flipTR(spots[0][count],spots[1][count]+1,currturn+1,0,1);
+    flipTR(spots[0][count]+1,spots[1][count],currturn+1,1,0);
+    flipTR(spots[0][count],spots[1][count]-1,currturn+1,0,-1);
+    flipTR(spots[0][count]-1,spots[1][count],currturn+1,-1,0);
+}
+
+int flipTR(const int x, const int y, const int color, const int incx,const int incy){
+    int enemy = RED;
+    if(color == RED){
+        enemy = BLUE;
+    }
+    if( !(x<ROWS&&y<COLUMNS)){
+        return 0;
+    }
+    else if(currboard[x][y] == color){
+        return 1;
+    }
+    else if(currboard[x][y] == enemy){
+        int temp = flipTR(x+incx,y+incy, color, incx,incy);
+        currboard[x][y] = color * temp;
+        return temp;
+    }
+    else{
+        return 0;
+    }
+}
 
 void clr_possi(unsigned char* currboard[][COLUMNS], int spots[][POSSI], int possible_spots){
 	for(int i = 0; i < possible_spots; ++i){
@@ -240,7 +273,8 @@ unsigned char chipNum(int color){
 int menu_tick(int menuState){
     static unsigned char hs;
     static unsigned char prevturn;
-    unsigned char countedchips;
+    unsigned char countedchipsR;
+    unsigned char countedchipsB;
 	switch(menuState){
         case initm:
             if(!N && !P && !ENT){
@@ -340,6 +374,9 @@ int menu_tick(int menuState){
             else if(mode == 2){
                 menuState = play2Go;
             }
+            else if(mode == 3){
+                menuState = vic_screen;
+            }
             else{
                 menuState = initm;
             }
@@ -428,6 +465,14 @@ int menu_tick(int menuState){
 				menuState = reseted;
 			}
 			break;
+        case vic_screen:
+            if(ALLB){
+                menuState = initm;
+            }
+            else{
+                menuState = vic_screen;
+            }
+            break;
 	}
 
 	switch(menuState){
@@ -451,21 +496,38 @@ int menu_tick(int menuState){
 			mode = 1;
 			break;
         case countchips:
-            if(turn == 0){
-                LCD_DisplayString(1,"   Turn: Blue   Blue:    Red:");
-            }
+            if(mode == 3){
+                if(turn == 0){
+                    LCD_DisplayString(1,"   Blue Wins!   Blue:    Red:");
+                }
+                else{
+                    LCD_DisplayString(1,"   Red Wins!    Blue:    Red:");
+                }
             else{
-                LCD_DisplayString(1,"   Turn: Red    Blue:    Red:");
+                if(turn == 0){
+                    LCD_DisplayString(1,"   Turn: Blue   Blue:    Red:");
+                }
+                else{
+                    LCD_DisplayString(1,"   Turn: Red    Blue:    Red:");
+                }
             }
-            countedchips = chipNum(BLUE);
+            countedchipsB = chipNum(BLUE);
             LCD_Cursor(22);
             LCD_WriteData(countedchips/10+'0');
             LCD_Cursor(23);
             LCD_WriteData(countedchips%10+'0');
-            countedchips = chipNum(RED);
+            countedchipsR = chipNum(RED);
             LCD_Cursor(30);
             LCD_WriteData(countedchips/10+'0');
             LCD_WriteData(countedchips%10+'0');
+            if(mode==3 && ((countedchipsR > countedchipsB)==turn)){
+                if(hs < countedchipsR){
+                    update_eeprom_word(&eeprom_highscore, countedchipsR);
+                }
+                else if(hs < countedchipsB){
+                    update_eeprom_word(&eeprom_highscore, countedchipsB);
+                }
+            }
             break;
 		case diffInc:
 			difficulty++;
@@ -617,7 +679,7 @@ int ledMatrix_SM(int ledDis){
                 }
 int play_SM(int p_state){
     static play2_states p_state;
-    static unsigned char max_cnt = 0;
+    static unsigned char max_cnt, countPlay;
     switch(p_state){
         case init:
 			MODERES
@@ -681,17 +743,60 @@ int play_SM(int p_state){
 			else{
 				p_state = victory;
 			}
+            break;
 		case victory:
 			MODERES
 			else{
 				p_state = victory;
 			}
+            break;
 		}
 	switch(p_state){
 		case init:
 			initBoard();
+            max_cnt =0;
+            countPlay = 0;
+            countWait = 0;
+            break;
 		case findt:
 			max_cnt = findspots();
+            countWait = 0;
+            break;
+        case find2:
+            break;
+        case wait_move:
+            countPlay = 0;
+            cb[spots[0][countWait]][spots[1][countWait]] = BOTHP;
+            break;
+        case nextspot:
+            cb[spots[0][countWait]][spots[1][countWait]] = EMPTY;
+            countWait++;
+            if(countWait >max_cnt){
+                count = 0;
+            }
+            break;
+        case prevspot:
+            cb[spots[0][countWait]][spots[1][countWait]] = EMPTY;
+            if(countWait == 0){
+                countWait = max_cnt -1;
+            }
+            else{
+                countWait--;
+            }
+            break;
+        case place:
+            cb[spots[0][countWait]][spots[1][countWait]] = turn+1;
+            flip_chip(countWait);
+            turn++;
+            break;
+        case check_win:
+            countPlay++;
+            turn++;
+            break;
+        case victory:
+            turn++;
+            mode = 3;
+            break;
 	}
     return p_state;
 }
