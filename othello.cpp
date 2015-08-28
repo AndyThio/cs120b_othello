@@ -254,14 +254,14 @@ int flipTR(const int x, const int y, const int color, const int incx,const int i
 }
 
 void ai_flipchip(const int count,const int currturn, unsigned char (*tempBoard)[COLUMNS]){
-    flipTR(tempBoard,spots[0][count]+1,spots[1][count]+1,currturn+1,1,1);
-    flipTR(tempBoard,spots[0][count]-1,spots[1][count]+1,currturn+1,-1,1);
-    flipTR(tempBoard,spots[0][count]+1,spots[1][count]-1,currturn+1,1,-1);
-    flipTR(tempBoard,spots[0][count]-1,spots[1][count]-1,currturn+1,-1,-1);
-    flipTR(tempBoard,spots[0][count],spots[1][count]+1,currturn+1,0,1);
-    flipTR(tempBoard,spots[0][count]+1,spots[1][count],currturn+1,1,0);
-    flipTR(tempBoard,spots[0][count],spots[1][count]-1,currturn+1,0,-1);
-    flipTR(tempBoard,spots[0][count]-1,spots[1][count],currturn+1,-1,0);
+    ai_flipTR(tempBoard,spots[0][count]+1,spots[1][count]+1,currturn+1,1,1);
+    ai_flipTR(tempBoard,spots[0][count]-1,spots[1][count]+1,currturn+1,-1,1);
+    ai_flipTR(tempBoard,spots[0][count]+1,spots[1][count]-1,currturn+1,1,-1);
+    ai_flipTR(tempBoard,spots[0][count]-1,spots[1][count]-1,currturn+1,-1,-1);
+    ai_flipTR(tempBoard,spots[0][count],spots[1][count]+1,currturn+1,0,1);
+    ai_flipTR(tempBoard,spots[0][count]+1,spots[1][count],currturn+1,1,0);
+    ai_flipTR(tempBoard,spots[0][count],spots[1][count]-1,currturn+1,0,-1);
+    ai_flipTR(tempBoard,spots[0][count]-1,spots[1][count],currturn+1,-1,0);
 }
 
 int ai_flipTR(unsigned char (*tempBoard)[COLUMNS], const int x, const int y, const int color, const int incx,const int incy){
@@ -326,7 +326,7 @@ unsigned char ai_function(const int spots_poss, unsigned char* ai_score, const u
     unsigned char secpos = 0;
 
     ai_flipchip(currentspot,turn, &tempboard);
-    ai_score = ai_chipNum(RED, &tempBoard);
+    ai_score = ai_chipNum(RED, &tempboard);
     secpos = ai_function(spots_poss, tempscore, currentspot+1);
     if(tempscore > ai_score){
         ai_score = tempscore;
@@ -873,16 +873,16 @@ int play_SM(int p_state){
 				p_state = victory;
 			}
             break;
-		}
         case ai_calc:
             MODERES
             else if(countWait == 0){
                 p_state = ai_calc;
             }
             else{
-                p_state = place
+                p_state = place;
             }
             break;
+		}
 	switch(p_state){
 		case init:
 			initBoard();
