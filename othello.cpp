@@ -235,7 +235,7 @@ int flipTR(const int x, const int y, const int color, const int incx,const int i
     if(color == RED){
         enemy = BLUE;
     }
-    if( !(x<ROWS||y<COLUMNS) && !(x < 0 || y < 0)){
+    if( !(x<ROWS&&y<COLUMNS) || !(x > 0 && y > 0)){
         return 0;
     }
     else if(currboard[x][y] == color){
@@ -570,11 +570,13 @@ int menu_tick(int menuState){
             LCD_WriteData(countedchipsR/10+'0');
             LCD_WriteData(countedchipsR%10+'0');
             if(gg){
-                if(hs < countedchipsR){
+                if(hs < countedchipsR && countedchipsR > countedchipsB){
                     update_eeprom_word(&eeprom_highscore, countedchipsR);
+                    hs = read_eeprom_word(&eeprom_highscore);
                 }
                 else if(hs < countedchipsB){
                     update_eeprom_word(&eeprom_highscore, countedchipsB);
+                    hs = read_eeprom_word(&eeprom_highscore);
                 }
             }
             break;
