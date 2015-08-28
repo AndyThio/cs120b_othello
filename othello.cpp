@@ -228,8 +228,13 @@ int menu_tick(int menuState){
     static unsigned char hs;
 	switch(menuState){
         case initm:
-            menuState = title;
-            LCD_DisplayString(1, "    Othello!     Press Any Key");
+            if(!N && !P && !ENT){
+                menuState = title;
+                LCD_DisplayString(1, "    Othello!     Press Any Key");
+            }
+            else{
+                menuState = initm;
+            }
 		case title:
 			if(N || P || ENT){
 				menuState = play2;
@@ -365,7 +370,7 @@ int menu_tick(int menuState){
 			if(NEXTB){
 				menuState = reseted;
                 LCD_ClearScreen;
-                LCD_DisplayString(1,"High Score Reset");
+                LCD_DisplayString(1,"High Score Reset Press Any Key");
 			}
 			else if (PREVB){
 				menuState = res;
