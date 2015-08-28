@@ -33,6 +33,8 @@ unsigned char spots[2][POSSI];
 #define CURRSEL 6
 #define changeturn turn = (turn+1)%2;
 
+unsigned char ai_wait = 1;
+
 //EEPROM Macros
 #define read_eeprom_word(address) eeprom_read_word ((const uint16_t*)address)
 #define write_eeprom_word(address,value) eeprom_write_word ((uint16_t*)address,(uint16_t)value)
@@ -875,7 +877,7 @@ int play_SM(int p_state){
             break;
         case ai_calc:
             MODERES
-            else if(countWait == 0){
+            else if(ai_wait){
                 p_state = ai_calc;
             }
             else{
@@ -888,6 +890,7 @@ int play_SM(int p_state){
 			initBoard();
             gg = 0;
             max_cnt =0;
+            ai_wait = 1;
             countPlay = 0;
             countWait = 0;
             break;
@@ -921,6 +924,7 @@ int play_SM(int p_state){
             currboard[spots[0][countWait]][spots[1][countWait]] = turn+1;
             flipchip(countWait,turn);
             changeturn
+            ai_wait = 1;
             break;
         case check_win:
             countPlay++;
@@ -933,9 +937,11 @@ int play_SM(int p_state){
         case ai_calc:
             if(difficulty == 1){
                 countWait = ai_function(max_cnt, 0,0);
+                ai_wait = 0;
             }
             else{
-                countWait = 1;
+                countWait = 0;
+                ai_wait = 0;
             }
 	}
     return p_state;
