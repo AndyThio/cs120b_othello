@@ -450,7 +450,7 @@ int menu_tick(int menuState){
 		case play1Go:
 			mode = 1;
 			break;
-        case chipcount:
+        case countchips:
             if(turn == 0){
                 LCD_DisplayString(1,"   Turn: Blue   Blue:    Red:");
             }
