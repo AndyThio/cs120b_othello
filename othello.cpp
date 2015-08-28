@@ -9,10 +9,13 @@ unsigned char currboard[ROWS][COLUMNS];
 
 #define CBS currBoard[i][j]
 
-#define ALLB N && P && E
-#define NEXTB N && !P && !E
-#define PREVB P && !E && !N
-#define ENTERB E && !P && !N
+#define N !(PINB & 0x40)
+#define P !(PINB & 0x20)
+#define ENT !(PINB & 0x80)
+#define ALLB N && P && ENT
+#define NEXTB N && !P && !ENT
+#define PREVB P && !ENT && !N
+#define ENTERB ENT && !P && !N
 
 
 #define PLAYER1 1
@@ -36,7 +39,6 @@ unsigned char mode = 0;
 unsigned char lcdtext[32];
 
 
-enum menu_SM {title, play2, play2Go, play1, play1Go, diffInc, diffDec, res, res_comfirm, reseted } menuState;
 enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory};
 
 void initBoard(){
@@ -197,11 +199,26 @@ void clr_possi(unsigned char* currboard[][COLUMNS], int spots[][POSSI], int poss
 	}
 }
 
+enum menu_SM {initm, title, play2, play2Go, play1, play1Go, diffInc, diffDec, res, res_comfirm, reseted } menuState;
+
+#define DISPLAYHS   LCD_Cursor(30);\
+                    LCD_WriteData(hs/10+'0');\
+                    LCD_Cursor(31);\
+                    LCD_WriteData(hs/10+'0');
 int menu_tick(){
+    static unsigned char hs;
 	switch(menuState){
+        case initm:
+            menuState = title;
+            LCD_DisplayString(1, "    Othello!       Press Any Key");
 		case title:
-			if(N || P || E){
+			if(N || P || ENT){
 				menuState = play2;
+                LCD_DisplayString(1, "   2 players     High Score: ");
+                LCD_Cursor(30);
+                LCD_WriteData(hs/10+'0');
+                LCD_Cursor(31);
+                LCD_WriteData(hs/10+'0');
 			}
 			else{
 				menuState = title;
@@ -210,13 +227,17 @@ int menu_tick(){
 
 		case play2:
 			if(ALLB){
-				menuState = title;
+				menuState = initm;
 			}
 			else if (NEXTB){
 				menuState = play1;
+                LCD_DisplayString(1, " 1 player Easy   High Score: ");
+                DISPLAYHS
 			}
 			else if (PREVB){
 				menuState = res;
+                LCD_DisplayString(1, "Reset High Score High Score: ");
+                DISPLAYHS
 			}
 			else if (ENTERB){
 				menuState = play2Go;
@@ -228,7 +249,7 @@ int menu_tick(){
 
 		case play2Go:
 			if(ALLB){
-				menuState = title;
+				menuState = initm;
 			}
 			else{
 				menuState = play2Go;
@@ -237,7 +258,7 @@ int menu_tick(){
 
 		case play1:
 			if(ALLB){
-				menuState = title;
+				menuState = initm;
 			}
 			else if (NEXTB){
 				menuState = diffInc;
@@ -255,7 +276,7 @@ int menu_tick(){
 
 		case play1Go:
 			if(ALLB){
-				menuState = title;
+				menuState = initm;
 			}
 			else{
 				menuState = play1Go;
@@ -265,17 +286,35 @@ int menu_tick(){
         case diffInc:
             if(difficulty <= 2){
                 menuState = play1;
+                if(difficulty == 2){
+                    LCD_DisplayString(1, " 1 player Hard   High Score: ");
+                    DISPLAYHS
+                }
+                else if(difficulty == 1){
+                    LCD_DisplayString(1, " 1 player Med.   High Score: ");
+                    DISPLAYHS
+                }
             }
             else if(difficulty > 2){
                 menuState = res;
+                LCD_DisplayString(1, "Reset High Score High Score: ");
+                DISPLAYHS
             }
             else {
-                menuState = title;
+                menuState = initm;
             }
             break;
 
 		case diffDec:
 			menuState = play1;
+            if(difficulty == 0){
+                LCD_DisplayString(1, " 1 player Easy   High Score: ");
+                DISPLAYHS
+            }
+            else if(difficulty == 1){
+                LCD_DisplayString(1, " 1 player Med.   High Score: ");
+                DISPLAYHS
+            }
 			break;
 
 		case res:
@@ -284,12 +323,15 @@ int menu_tick(){
 			}
 			else if (ENTERB){
 				menuState = res_comfirm;
+                LCD_DisplayString(1, " Confirm Reset? Yes=Next No=Prev");
 			}
 			else if (ALLB){
-				menuState = title;
+				menuState = initm;
 			}
 			else if(PREVB){
 				menuState = play1;
+                LCD_DisplayString(1, " 1 player Hard   High Score: ");
+                DISPLAYHS
 			}
 			else {
 				menuState = res;
@@ -299,12 +341,15 @@ int menu_tick(){
 		case res_comfirm:
 			if(NEXTB){
 				menuState = reseted;
+                LCD_DisplayString(1,"High Score Reset");
 			}
 			else if (PREVB){
 				menuState = res;
+                LCD_DisplayString(1, "Reset High Score High Score: ");
+                DISPLAYHS
 			}
 			else if (ALLB){
-				menuState = title;
+				menuState = initm;
 			}
 			else{
 				menuState = res_comfirm;
@@ -312,8 +357,8 @@ int menu_tick(){
 			break;
 
 		case reseted:
-			if(N || B || P){
-				menuState = title;
+			if(N || ENT || P){
+				menuState = initm;
 			}
 			else{
 				menuState = reseted;
@@ -322,14 +367,14 @@ int menu_tick(){
 	}
 
 	switch(menuState){
+        case initm:
+            hs = read_eeprom_word(&eeprom_highscore);
 		case title:
-            LCD_DisplayString(1, strcat("    Othello!      High Score: ",read_eeprom_word(&eeprom_highscore)));
 			mode = 0;
 			difficulty = 0;
 			break;
 
 		case play2:
-            LCD_DisplayString(1, strcat("   2 players       High Score: ",read_eeprom_word(&eeprom_highscore)));
 			difficulty = 0;
 			break;
 		case play2Go:
@@ -337,7 +382,6 @@ int menu_tick(){
 			difficulty = 0;
 			break;
 		case play1:
-            LCD_DisplayString(1, strcat("    1 player       High Score: ",read_eeprom_word(&eeprom_highscore)));
 			break;
 		case play1Go:
 			mode = 1;
@@ -349,10 +393,8 @@ int menu_tick(){
 			difficulty--;
 			break;
 		case res:
-            LCD_DisplayString(1, strcat("Reset High Score  High Score: ",read_eeprom_word(&eeprom_highscore)));
 			break;
 		case res_comfirm:
-            LCD_DisplayString (1, " Confirm Reset   YES = N No = P");
 			break;
 		case reseted:
 			//reset eeprom;
