@@ -315,6 +315,21 @@ int menu_tick(int menuState){
 			}
 			else if (ENTERB){
 				menuState = play2Go;
+                if(turn == 0){
+                    LCD_DisplayString(1,"   Turn: Blue   Blue:    Red:");
+                }
+                else{
+                    LCD_DisplayString(1,"   Turn: Red    Blue:    Red:");
+                }
+                countedchipsB = chipNum(BLUE);
+                LCD_Cursor(22);
+                LCD_WriteData(countedchipsB/10+'0');
+                LCD_Cursor(23);
+                LCD_WriteData(countedchipsB%10+'0');
+                countedchipsR = chipNum(RED);
+                LCD_Cursor(30);
+                LCD_WriteData(countedchipsR/10+'0');
+                LCD_WriteData(countedchipsR%10+'0');
 			}
 			else{
 				menuState = play2;
@@ -350,6 +365,21 @@ int menu_tick(int menuState){
             }
 			else if (ENTERB){
 				menuState = play1Go;
+                if(turn == 0){
+                    LCD_DisplayString(1,"   Turn: Blue   Blue:    Red:");
+                }
+                else{
+                    LCD_DisplayString(1,"   Turn: Red    Blue:    Red:");
+                }
+                countedchipsB = chipNum(BLUE);
+                LCD_Cursor(22);
+                LCD_WriteData(countedchipsB/10+'0');
+                LCD_Cursor(23);
+                LCD_WriteData(countedchipsB%10+'0');
+                countedchipsR = chipNum(RED);
+                LCD_Cursor(30);
+                LCD_WriteData(countedchipsR/10+'0');
+                LCD_WriteData(countedchipsR%10+'0');
 			}
 			else{
 				menuState = play1;
@@ -777,7 +807,7 @@ int play_SM(int p_state){
         case nextspot:
             currboard[spots[0][countWait]][spots[1][countWait]] = EMPTY;
             countWait++;
-            if(countWait >max_cnt){
+            if(countWait >(max_cnt-1)){
                 countWait = 0;
             }
             break;
@@ -793,14 +823,14 @@ int play_SM(int p_state){
         case place:
             currboard[spots[0][countWait]][spots[1][countWait]] = turn+1;
             flipchip(countWait,turn);
-            turn++;
+            changeturn
             break;
         case check_win:
             countPlay++;
-            turn++;
+            changeturn
             break;
         case victory:
-            turn++;
+            changeturn
             mode = 3;
             break;
 	}
@@ -818,9 +848,11 @@ main(void){
     DDRC = 0xFF; PORTC = 0xFF;
     DDRD = 0xFF; PORTD = 0xFF;
     unsigned char currSM = 0;
-    TASKINIT(currSM,initm,100,menu_tick)
+    TASKINIT(currSM,initm,50,menu_tick)
     TASKINIT(currSM,init, 100,play_SM)
     TASKINIT(currSM,start,1,ledMatrix_SM)
+
+    LCD_init();
 
     TimerSet(tasksPeriodGCD);
     TimerOn();
