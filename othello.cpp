@@ -800,7 +800,7 @@ int play_SM(int p_state){
     switch(p_state){
         case init:
 			MODERES
-            else if(mode == 2){
+            else if(mode == 2 || mode == 1){
                 p_state = findt;
             }
             else{
