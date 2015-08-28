@@ -584,6 +584,9 @@ int menu_tick(int menuState){
         case initm:
             hs = read_eeprom_word(&eeprom_highscore);
             break;
+        case pretitle:
+            hs = read_eeprom_word(&eeprom_highscore);
+            break;
 		case title:
 			mode = 0;
 			difficulty = 0;
