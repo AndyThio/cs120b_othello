@@ -56,7 +56,7 @@ task tasks[3];
 const unsigned short taskNum = 3;
 const unsigned long tasksPeriodGCD = 1;
 
-enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory};
+enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory, ai_calc};
 enum menu_SM {initm,pretitle, title, play2, play2Go, play1, play1Go,countchips, diffInc, diffDec, res, res_comfirm, reseted, vic_screen };
 enum matrix_States {start, display, bstate};
 
@@ -253,12 +253,50 @@ int flipTR(const int x, const int y, const int color, const int incx,const int i
     }
 }
 
-void clr_possi(unsigned char* currboard[][COLUMNS], int spots[][POSSI], int possible_spots){
-	for(int i = 0; i < possible_spots; ++i){
-		if(!(currboard[spots[1][i]][spots[2][i]] == 1 || currboard[spots[1][i]][spots[2][i]] == 2)){
-			currboard[spots[1][i]][spots[2][i]] = 0;
-		}
-	}
+void ai_flipchip(const int count,const int currturn, unsigned char (*tempBoard)[COLUMNS]){
+    flipTR(tempBoard,spots[0][count]+1,spots[1][count]+1,currturn+1,1,1);
+    flipTR(tempBoard,spots[0][count]-1,spots[1][count]+1,currturn+1,-1,1);
+    flipTR(tempBoard,spots[0][count]+1,spots[1][count]-1,currturn+1,1,-1);
+    flipTR(tempBoard,spots[0][count]-1,spots[1][count]-1,currturn+1,-1,-1);
+    flipTR(tempBoard,spots[0][count],spots[1][count]+1,currturn+1,0,1);
+    flipTR(tempBoard,spots[0][count]+1,spots[1][count],currturn+1,1,0);
+    flipTR(tempBoard,spots[0][count],spots[1][count]-1,currturn+1,0,-1);
+    flipTR(tempBoard,spots[0][count]-1,spots[1][count],currturn+1,-1,0);
+}
+
+int ai_flipTR(unsigned char (*tempBoard)[COLUMNS], const int x, const int y, const int color, const int incx,const int incy){
+    int enemy = RED;
+    if(color == RED){
+        enemy = BLUE;
+    }
+    if( !(x<ROWS&&y<COLUMNS) || !(x >= 0 && y >= 0)){
+        return 0;
+    }
+    else if(tempBoard[x][y] == color){
+        return 1;
+    }
+    else if(tempBoard[x][y] == enemy){
+        int temp = flipTR(x+incx,y+incy, color, incx,incy);
+        if(temp == 1){
+            tempBoard[x][y] = color;
+        }
+        return temp;
+    }
+    else{
+        return 0;
+    }
+}
+
+unsigned char ai_chipNum(int color,unsigned char (*tempBoard)[COLUMNS]){
+    int chipCount = 0;
+    for(int i = 0; i < ROWS; ++i){
+        for(int j = 0; j < COLUMNS; ++j){
+            if(tempBoard[i][j] == color){
+                 chipCount++;
+            }
+        }
+    }
+    return chipCount;
 }
 
 unsigned char chipNum(int color){
@@ -272,6 +310,33 @@ unsigned char chipNum(int color){
     }
     return chipCount;
 }
+
+unsigned char ai_function(const int spots_poss, unsigned char* ai_score, const unsigned char currentspot){
+    if(spots_poss < currentspot){
+        return 0;
+    }
+    unsigned char tempboard[ROWS][COLUMNS] = {0};
+    for(int i = 0; i < ROWS; ++i){
+        for(int j = 0; j < COLUMNS; ++j){
+            tempboard[i][j] = currboard[i][j];
+        }
+    }
+
+    unsigned char tempscore = 0;
+    unsigned char secpos = 0;
+
+    ai_flipchip(currentspot,turn, &tempboard);
+    ai_score = ai_chipNum(RED, &tempBoard);
+    secpos = ai_function(spots_poss, tempscore, currentspot+1);
+    if(tempscore > ai_score){
+        ai_score = tempscore;
+        return secpos;
+    }
+    else{
+        return currentspot;
+    }
+}
+
 
 #define DISPLAYHS   LCD_Cursor(30);\
                     LCD_WriteData(hs/10+'0');\
@@ -750,11 +815,17 @@ int play_SM(int p_state){
             break;
         case find2:
 			MODERES
-            else if(max_cnt != 0){
+            else if(max_cnt == 0){
+                p_state = check_win;
+            }
+            else if(((mode == 2) && max_cnt)||((mode == 1) && (turn+1 == BLUE) && max_cnt)){
                 p_state = wait_move;
             }
+            else if((mode == 1) && (turn + 1 == RED) && max_cnt){
+                p_state = ai_calc;
+            }
             else{
-                p_state = check_win;
+                p_state = wait_move;
             }
             break;
         case wait_move:
@@ -803,6 +874,15 @@ int play_SM(int p_state){
 			}
             break;
 		}
+        case ai_calc:
+            MODERES
+            else if(countWait == 0){
+                p_state = ai_calc;
+            }
+            else{
+                p_state = place
+            }
+            break;
 	switch(p_state){
 		case init:
 			initBoard();
@@ -850,6 +930,13 @@ int play_SM(int p_state){
             changeturn
             gg = 1;
             break;
+        case ai_calc:
+            if(difficulty == 1){
+                countWait = ai_function(max_cnt, 0,0);
+            }
+            else{
+                countWait = 1;
+            }
 	}
     return p_state;
 }
