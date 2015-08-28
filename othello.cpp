@@ -235,7 +235,7 @@ int flipTR(const int x, const int y, const int color, const int incx,const int i
     if(color == RED){
         enemy = BLUE;
     }
-    if( !(x<ROWS&&y<COLUMNS) || !(x > 0 && y > 0)){
+    if( !(x<ROWS&&y<COLUMNS) || !(x >= 0 && y >= 0)){
         return 0;
     }
     else if(currboard[x][y] == color){
