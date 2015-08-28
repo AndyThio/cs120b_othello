@@ -229,15 +229,12 @@ int menu_tick(int menuState){
 	switch(menuState){
         case initm:
             menuState = title;
-            LCD_DisplayString(1, "    Othello!       Press Any Key");
+            LCD_DisplayString(1, "    Othello!     Press Any Key");
 		case title:
 			if(N || P || ENT){
 				menuState = play2;
                 LCD_DisplayString(1, "   2 players     High Score: ");
-                LCD_Cursor(30);
-                LCD_WriteData(hs/10+'0');
-                LCD_Cursor(31);
-                LCD_WriteData(hs/10+'0');
+                DISPLAYHS
 			}
 			else{
 				menuState = title;
@@ -282,9 +279,14 @@ int menu_tick(int menuState){
 			else if (NEXTB){
 				menuState = diffInc;
 			}
-			else if (PREVB){
+			else if (PREVB && difficulty >0){
 				menuState = diffDec;
 			}
+            else if (PREVB && difficulty == 0){
+				menuState = play2;
+                LCD_DisplayString(1, "   2 players     High Score: ");
+                DISPLAYHS
+            }
 			else if (ENTERB){
 				menuState = play1Go;
 			}
@@ -339,6 +341,8 @@ int menu_tick(int menuState){
 		case res:
 			if(NEXTB){
 				menuState = play2;
+                LCD_DisplayString(1, "   2 players     High Score: ");
+                DISPLAYHS
 			}
 			else if (ENTERB){
 				menuState = res_comfirm;
@@ -360,6 +364,7 @@ int menu_tick(int menuState){
 		case res_comfirm:
 			if(NEXTB){
 				menuState = reseted;
+                LCD_ClearScreen;
                 LCD_DisplayString(1,"High Score Reset");
 			}
 			else if (PREVB){
@@ -417,9 +422,10 @@ int menu_tick(int menuState){
 			break;
 		case reseted:
 			//reset eeprom;
-            update_eeprom_word(&eeprom_highscore, 0)
+            update_eeprom_word(&eeprom_highscore, 0);
 			break;
 	}
+    return menuState;
 }
 
 void transmit_dataB(unsigned char data){
