@@ -519,7 +519,7 @@ int menu_tick(int menuState){
             LCD_Cursor(22);
             LCD_WriteData(countedchipsB/10+'0');
             LCD_Cursor(23);
-            LCD_WriteData(countedchips%B10+'0');
+            LCD_WriteData(countedchipsB%10+'0');
             countedchipsR = chipNum(RED);
             LCD_Cursor(30);
             LCD_WriteData(countedchipsR/10+'0');
@@ -754,7 +754,6 @@ int play_SM(int p_state){
 			}
             break;
 		}
-    }
 	switch(p_state){
 		case init:
 			initBoard();
