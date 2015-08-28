@@ -926,7 +926,6 @@ int play_SM(int p_state){
             changeturn
             break;
         case victory:
-            changeturn
             gg = 1;
             break;
         case ai_calc:
