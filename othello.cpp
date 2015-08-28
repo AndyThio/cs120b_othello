@@ -242,7 +242,9 @@ int flipTR(const int x, const int y, const int color, const int incx,const int i
     }
     else if(currboard[x][y] == enemy){
         int temp = flipTR(x+incx,y+incy, color, incx,incy);
-        currboard[x][y] = color * temp;
+        if(temp == 1){
+            currboard[x][y] = color;
+        }
         return temp;
     }
     else{
@@ -288,6 +290,7 @@ int menu_tick(int menuState){
             else{
                 menuState = initm;
             }
+            break;
 		case title:
 			if(N || P || ENT){
 				menuState = play2;
@@ -297,7 +300,7 @@ int menu_tick(int menuState){
 			else{
 				menuState = title;
 			}
-		break;
+            break;
 
 		case play2:
 			if(ALLB){
@@ -507,11 +510,15 @@ int menu_tick(int menuState){
                 menuState = vic_screen;
             }
             break;
+        default:
+            menuState = initm;
+            break;
 	}
 
 	switch(menuState){
         case initm:
             hs = read_eeprom_word(&eeprom_highscore);
+            break;
 		case title:
 			mode = 0;
 			difficulty = 0;
@@ -848,7 +855,7 @@ main(void){
     DDRC = 0xFF; PORTC = 0xFF;
     DDRD = 0xFF; PORTD = 0xFF;
     unsigned char currSM = 0;
-    TASKINIT(currSM,initm,50,menu_tick)
+    TASKINIT(currSM,initm,100,menu_tick)
     TASKINIT(currSM,init, 100,play_SM)
     TASKINIT(currSM,start,1,ledMatrix_SM)
 
