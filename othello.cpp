@@ -2,6 +2,7 @@
 #include "timer.h"
 #include <stdio.h>
 #include "io.c"
+#include <avr/eeprom.h>
 
 #define ROWS 8
 #define COLUMNS 8
@@ -9,7 +10,7 @@
 unsigned char currboard[ROWS][COLUMNS];
 unsigned char spots[2][POSSI];
 
-#define CBS currBoard[i][j]
+#define CBS currboard[i][j]
 
 #define N !(PINB & 0x40)
 #define P !(PINB & 0x20)
@@ -49,6 +50,8 @@ typedef struct task{
     int (*TickFct)(int);
 } task;
 
+task tasks[3];
+const unsigned short taskNum = 3;
 const unsigned long tasksPeriodGCD = 1;
 
 enum play2_states {init, findt,find2, wait_move, nextspot, prevspot, place, check_win, victory};
@@ -58,11 +61,11 @@ enum matrix_States {start, display, bstate};
 void TimerISR(){
     unsigned char i;
     for(i = 0; i < taskNum; ++i){
-        if(tasks[i].elapsedTime >= tasks[i].period){
-            tasks[i].state = tasks[i].TickFct(tasks[i].state);
-            tasks[i].elapsedTime = 0;
+        if(task[i].elapsedTime >= task[i].period){
+            task[i].state = task[i].TickFct(task[i].state);
+            task[i].elapsedTime = 0;
         }
-        tasks[i].elapsedTime += tasksPeriodGCD;
+        task[i].elapsedTime += tasksPeriodGCD;
     }
 }
 void initBoard(){
@@ -514,13 +517,13 @@ int menu_tick(int menuState){
             }
             countedchipsB = chipNum(BLUE);
             LCD_Cursor(22);
-            LCD_WriteData(countedchips/10+'0');
+            LCD_WriteData(countedchipsB/10+'0');
             LCD_Cursor(23);
-            LCD_WriteData(countedchips%10+'0');
+            LCD_WriteData(countedchips%B10+'0');
             countedchipsR = chipNum(RED);
             LCD_Cursor(30);
-            LCD_WriteData(countedchips/10+'0');
-            LCD_WriteData(countedchips%10+'0');
+            LCD_WriteData(countedchipsR/10+'0');
+            LCD_WriteData(countedchipsR%10+'0');
             if(mode==3 && ((countedchipsR > countedchipsB)==turn)){
                 if(hs < countedchipsR){
                     update_eeprom_word(&eeprom_highscore, countedchipsR);
@@ -729,7 +732,7 @@ int play_SM(int p_state){
 		case prevspot:
 			MODERES
 			else{
-				p_state = wait_move
+				p_state = wait_move;
 			}
 			break;
 		case place:
@@ -737,7 +740,7 @@ int play_SM(int p_state){
 			break;
 		case check_win:
 			MODERES
-			else if(end_count < 2)
+			else if(countPlay < 2){
 				p_state = findt;
 			}
 			else{
@@ -751,6 +754,7 @@ int play_SM(int p_state){
 			}
             break;
 		}
+    }
 	switch(p_state){
 		case init:
 			initBoard();
@@ -801,8 +805,6 @@ int play_SM(int p_state){
     return p_state;
 }
 
-task tasks[3];
-const unsigned short taskNum = 3;
 #define TASKINIT(taski,initstate, periodi, tf) tasks[taski].state = initstate;\
                        tasks[taski].period = periodi;\
                        tasks[taski].elapsedTime = tasks[taski].period; \
