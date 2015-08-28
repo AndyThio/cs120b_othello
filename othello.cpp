@@ -490,12 +490,12 @@ int menu_tick(int menuState){
             }
             break;
         case diffInc:
-            if(difficulty < 1){
+            if(difficulty <= 1){
                 menuState = play1;
                 LCD_DisplayString(1, " 1 player Hard   High Score: ");
                 DISPLAYHS
             }
-            else if(difficulty >= 1){
+            else if(difficulty > 1){
                 menuState = res;
                 LCD_DisplayString(1, "Reset High Score High Score: ");
                 DISPLAYHS
