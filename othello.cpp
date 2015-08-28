@@ -235,7 +235,7 @@ int flipTR(const int x, const int y, const int color, const int incx,const int i
     if(color == RED){
         enemy = BLUE;
     }
-    if( !(x<ROWS||y<COLUMNS)){
+    if( !(x<ROWS||y<COLUMNS) && !(x < 0 || y < 0)){
         return 0;
     }
     else if(currboard[x][y] == color){
@@ -541,12 +541,17 @@ int menu_tick(int menuState){
 			mode = 1;
 			break;
         case countchips:
+            countedchipsB = chipNum(BLUE);
+            countedchipsR = chipNum(RED);
             if(gg){
-                if(turn == 0){
+                if(countedchipsB > countedchipsR){
                     LCD_DisplayString(1,"   Blue Wins!   Blue:    Red:");
                 }
-                else{
+                else if(countedchipsB < countedchipsR){
                     LCD_DisplayString(1,"   Red Wins!    Blue:    Red:");
+                }
+                else{
+                    LCD_DisplayString(1,"    Tie Game    Blue:    Red:");
                 }
             }
             else{
@@ -557,12 +562,10 @@ int menu_tick(int menuState){
                     LCD_DisplayString(1,"   Turn: Red    Blue:    Red:");
                 }
             }
-            countedchipsB = chipNum(BLUE);
             LCD_Cursor(22);
             LCD_WriteData(countedchipsB/10+'0');
             LCD_Cursor(23);
             LCD_WriteData(countedchipsB%10+'0');
-            countedchipsR = chipNum(RED);
             LCD_Cursor(30);
             LCD_WriteData(countedchipsR/10+'0');
             LCD_WriteData(countedchipsR%10+'0');
