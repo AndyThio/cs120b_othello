@@ -652,6 +652,8 @@ int ledMatrix_SM(int ledDis){
             currRow = 0x01;
             redDis = 0x00;
             bluDis = 0x00;
+            transmit_dataB(~bluDis);
+            PORTD = ~redDis;
             transmit_dataC(currRow << i);
             for(int j = 0; j < COLUMNS; ++j){
                 bluTemp = 0x01;
@@ -811,6 +813,10 @@ int play_SM(int p_state){
                        tasks[taski].TickFct = & tf;\
                        taski ++;
 main(void){
+    DDRA = 0xFF; PORTA = 0x00;
+    DDRB = 0x0F; PORTB = 0xF0;
+    DDRC = 0xFF; PORTC = 0xFF;
+    DDRD = 0xFF; PORTD = 0xFF;
     unsigned char currSM = 0;
     TASKINIT(currSM,initm,100,menu_tick)
     TASKINIT(currSM,init, 100,play_SM)
@@ -820,7 +826,6 @@ main(void){
     TimerOn();
 
     while(1){
-        Sleep();
     }
     return 0;
 }
